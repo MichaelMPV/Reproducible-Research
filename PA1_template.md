@@ -1,0 +1,190 @@
+---
+title: "Reproducible Research Semana 2"
+author: "Michael"
+date: "21/7/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Commit containing full submission
+
+1 Code for reading in the dataset and/or processing the data
+2 Histogram of the total number of steps taken each day
+3 Mean and median number of steps taken each day
+4 Time series plot of the average number of steps taken
+5 The 5-minute interval that, on average, contains the maximum number of steps
+6 Code to describe and show a strategy for imputing missing data
+7 Histogram of the total number of steps taken each day after missing values are imputed
+8 Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+9 All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
+
+Start
+
+
+1 Código para leer en el conjunto de datos y / o procesar los datos
+```{r  echo = TRUE}
+library(ggplot2)  
+  activity <- read.csv("./activity.csv")
+  activity$date <- as.POSIXct(activity$date,format= "%Y-%m-%d")
+  activity_weekday <- weekdays(activity$date)
+  activity <- cbind(activity,activity_weekday)
+  
+  summary(activity)
+```
+ 
+2 Histogram of the total number of steps taken each day
+
+```{r echo = TRUE}
+total_steps <- with(activity, aggregate(steps, by = list(date), FUN = sum, na.rm = TRUE))
+names(total_steps) <- c("date", "steps")
+hist(total_steps$steps, main = "Total of steps taken for day",
+                      xlab = "Total steps taken for day", 
+                      col = "darkblue", ylim = c(0,20), 
+                      breaks = seq(0,25000, by=2500))
+```
+3 Mean and median number of steps taken each day
+```{r echo = TRUE}
+#Mean of the total number of steps taken for day is:
+mean(total_steps$steps)
+# 9354.23
+#Median of the total number of steps taken for day is:
+median(total_steps$steps)
+#10395
+```
+
+4 Time series plot of the average number of steps taken
+```{r echo = TRUE}
+#What is the average daily activity pattern?
+
+daily_activity <- aggregate(activity$steps, by=list(activity$interval), FUN=mean, na.rm=TRUE)
+names(daily_activity) <- c("interval", "mean")
+plot(daily_activity$interval,
+     daily_activity$mean, type = "l", 
+     col="darkred", lwd = 2, xlab="Interval", 
+     ylab="Average number of steps", 
+     main="Average number of steps for intervals")
+
+
+#Which 5-minute interval, on average across all the 
+#days in the dataset, contains the maximum number 
+#of steps?
+
+daily_activity[which.max(daily_activity$mean), ]$interval
+#835
+```
+
+5 The 5-minute interval that, on average, contains the maximum number of steps
+```{r echo = TRUE}
+# Imputing missing values
+
+#Calculate and report the total number of missing 
+#values in the dataset (i.e. the total number of 
+#rows with \color{red}{\verb|NA|}NAs)
+sum(is.na(activity$steps))
+```
+6 Code to describe and show a strategy for imputing missing data
+
+```{r echo = TRUE}
+
+#Devise a strategy for filling in all of the missing 
+#values in the dataset. The strategy does not need to 
+#be sophisticated. For example, you could use the
+#mean/median for that day, or the mean 
+#for that 5-minute interval, etc.
+newdevise_steps <- daily_activity$mean[match(activity$interval, daily_activity$interval)]
+
+#Create a new dataset that is equal to the original 
+#dataset but with the missing data filled in.
+ 
+new_dataset <- transform(activity, steps = ifelse(is.na(activity$steps), yes = newdevise_steps, no = activity$steps))
+total_steps_new <- aggregate(steps ~ date, new_dataset, sum)
+names(total_steps_new) <- c("date", "daily_steps")
+
+
+```
+
+
+
+7 Histogram of the total number of steps taken each day after missing values are imputed
+
+```{r echo = TRUE}
+
+#Make a histogram of the total number of steps taken 
+# day and Calculate and report the mean and median
+#total number of steps taken per day. Do these values 
+#differ from the estimates from the first part of the 
+#assignment? What is the impact of imputing missing 
+#data on the estimates of the total daily number of steps?
+hist(total_steps_new$daily_steps, col = "darkred", 
+     xlab = "Total of steps for day", ylim = c(0,30), 
+     main = "Total number of steps taken each day",
+     breaks = seq(0,25000,by=2500))
+#mean of the total number of steps taken per day
+mean(total_steps_new$daily_steps)
+#10766.19
+
+#median of the total number of steps taken per day:
+median(total_steps_new$daily_steps)
+#10766.19
+
+#Do these values differ from the estimates from the 
+#first part of the assignment? 
+#RES: YES ARE DIFFERENT
+
+#What is the impact of imputing missing data on the 
+#estimates of the total daily number of steps?
+#RES: The mean and median values have increased and
+#also have the same value.
+
+```
+8 Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r echo = TRUE}
+#Create a new factor variable in the dataset with two
+#levels – “weekday” and “weekend” indicating whether
+#a given date is a weekday or weekend day.
+
+activity$date <- as.Date(strptime(activity$date, format="%Y-%m-%d"))
+activity$datetype <- sapply(activity$date, function(x) {
+  if (weekdays(x) == "Saturday" | weekdays(x) =="Sunday") 
+  {y <- "Weekend"} else 
+  {y <- "Weekday"}
+  y
+})
+
+
+```
+9 All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
+
+```{r echo = TRUE}
+
+#Make a panel plot containing a time series plot 
+#(i.e. \color{red}{\verb|type = "l"|}type = "l") 
+#of the 5-minute interval (x-axis) and the average
+#number of steps taken, averaged across all weekday 
+#days or weekend days (y-axis). See the README file
+#in the GitHub repository to see an example of what
+#this plot should look like using simulated data.
+
+activity_date <- aggregate(steps~interval + datetype, activity, mean, na.rm = TRUE)
+plot<- ggplot(activity_date, aes(x = interval , y = steps, color = datetype)) +
+    geom_line() +
+    labs(title = "Average daily steps for date", x = "Interval", y = "Average for number of steps") +
+    facet_wrap(~datetype, ncol = 1, nrow=2)
+  print(plot)
+
+```
+
+
+
+
+
+
+

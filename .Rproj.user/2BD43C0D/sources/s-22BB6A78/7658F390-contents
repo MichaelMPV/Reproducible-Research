@@ -1,0 +1,6 @@
+activity_date <- aggregate(steps~interval + datetype, activity, mean, na.rm = TRUE)
+plot<- ggplot(activity_date, aes(x = interval , y = steps, color = datetype)) +
+  geom_line() +
+  labs(title = "Average daily steps for date", x = "Interval", y = "Average for number of steps") +
+  facet_wrap(~datetype, ncol = 1, nrow=2)
+print(plot)
